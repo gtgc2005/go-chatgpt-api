@@ -21,17 +21,20 @@ var firstTime = true
 //goland:noinspection GoUnhandledErrorResult
 func init() {
 	go func() {
-		ticker := time.NewTicker(time.Minute)
+		ticker := time.NewTicker(time.Minute * healthCheckInterval)
 		for {
 			select {
 			case <-ticker.C:
-				healthCheck()
+				resp, err := healthCheck()
+				if err != nil && resp.StatusCode != http.StatusOK {
+					getCookies()
+				}
 			}
 		}
 	}()
 
 	go func() {
-		ticker := time.NewTicker(time.Minute * 10)
+		ticker := time.NewTicker(time.Minute * getCookiesInterval)
 		for {
 			select {
 			case <-ticker.C:
@@ -71,6 +74,7 @@ func checkHealthCheckStatus(resp *http.Response) {
 	defer resp.Body.Close()
 	if resp != nil && resp.StatusCode == http.StatusOK {
 		logger.Info(welcomeText)
+		firstTime = false
 	} else {
 		logger.Warn(healthCheckFailedText)
 
