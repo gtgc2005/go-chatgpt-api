@@ -27,9 +27,30 @@ More details: https://github.com/linweiyuan/go-chatgpt-api/issues/74
 
 ---
 
+## ChatGPT APIs
+
+---
+
+- `ChatGPT` user login (`accessToken` will be returned) (currently `Google` or `Microsoft` accounts are not supported).
+
+`POST /chatgpt/login`
+
+<details>
+
+```json
+{
+  "username": "email",
+  "password": "password"
+}
+```
+
+</details>
+
+---
+
 - get conversation list
 
-`GET /conversations?offset=0&limit=20`
+`GET /chatgpt/conversations?offset=0&limit=20`
 
 `offset` defaults to 0, `limit` defaults to 20 (max 100).
 
@@ -37,13 +58,13 @@ More details: https://github.com/linweiyuan/go-chatgpt-api/issues/74
 
 - get conversation content
 
-`GET /conversation/{conversationID}`
+`GET /chatgpt/conversation/{conversationID}`
 
 ---
 
 - create conversation
 
-`POST /conversation`
+`POST /chatgpt/conversation`
 
 <details>
 
@@ -78,7 +99,7 @@ More details: https://github.com/linweiyuan/go-chatgpt-api/issues/74
 
 - generate conversation title
 
-`POST /conversation/gen_title/{conversationID}`
+`POST /chatgpt/conversation/gen_title/{conversationID}`
 
 <details>
 
@@ -94,7 +115,7 @@ More details: https://github.com/linweiyuan/go-chatgpt-api/issues/74
 
 - rename conversation
 
-`PATCH /conversation/{conversationID}`
+`PATCH /chatgpt/conversation/{conversationID}`
 
 <details>
 
@@ -110,7 +131,7 @@ More details: https://github.com/linweiyuan/go-chatgpt-api/issues/74
 
 - delete conversation
 
-`PATCH /conversation/{conversationID}`
+`PATCH /chatgpt/conversation/{conversationID}`
 
 <details>
 
@@ -126,7 +147,7 @@ More details: https://github.com/linweiyuan/go-chatgpt-api/issues/74
 
 - delete all conversations
 
-`PATCH /conversations`
+`PATCH /chatgpt/conversations`
 
 <details>
 
@@ -142,7 +163,7 @@ More details: https://github.com/linweiyuan/go-chatgpt-api/issues/74
 
 - feedback message
 
-`POST /conversation/message_feedback`
+`POST /chatgpt/conversation/message_feedback`
 
 <details>
 
@@ -158,9 +179,13 @@ More details: https://github.com/linweiyuan/go-chatgpt-api/issues/74
 
 ---
 
-- login (currently only support ChatGPT accounts)
+## Platform APIs
 
-`POST /auth/login`
+---
+
+- `platform` user login (`sessionKey` will be returned)
+
+`POST /platform/login`
 
 <details>
 
@@ -175,9 +200,41 @@ More details: https://github.com/linweiyuan/go-chatgpt-api/issues/74
 
 ---
 
-- chat completion (apiKey)
+- [List models](https://platform.openai.com/docs/api-reference/models/list)
 
-`POST /v1/chat/completions`
+`GET /platform/v1/models`
+
+---
+
+- [Retrieve model](https://platform.openai.com/docs/api-reference/models/retrieve)
+
+`GET /platform/v1/models/{model}`
+
+---
+
+- [Create completion](https://platform.openai.com/docs/api-reference/completions/create)
+
+`POST /platform/v1/completions`
+
+<details>
+
+```json
+{
+  "model": "text-davinci-003",
+  "prompt": "Say this is a test",
+  "max_tokens": 7,
+  "temperature": 0,
+  "stream": true
+}
+```
+
+</details>
+
+---
+
+- [Create chat completion](https://platform.openai.com/docs/api-reference/chat/create)
+
+`POST /platform/v1/chat/completions`
 
 <details>
 
@@ -195,6 +252,83 @@ More details: https://github.com/linweiyuan/go-chatgpt-api/issues/74
 ```
 
 </details>
+
+---
+
+- [Create edit](https://platform.openai.com/docs/api-reference/edits/create)
+
+`POST /platform/v1/edits`
+
+<details>
+
+```json
+{
+  "model": "text-davinci-edit-001",
+  "input": "What day of the wek is it?",
+  "instruction": "Fix the spelling mistakes"
+}
+```
+
+</details>
+
+---
+
+- [Create image](https://platform.openai.com/docs/api-reference/images/create)
+
+`POST /platform/v1/images/generations`
+
+<details>
+
+```json
+{
+  "prompt": "A cute dog",
+  "n": 2,
+  "size": "1024x1024"
+}
+```
+
+</details>
+
+---
+
+- [Create embeddings](https://platform.openai.com/docs/api-reference/embeddings/create)
+
+`POST /platform/v1/embeddings`
+
+<details>
+
+```json
+{
+  "model": "text-embedding-ada-002",
+  "input": "The food was delicious and the waiter..."
+}
+```
+
+</details>
+
+---
+
+- [List files](https://platform.openai.com/docs/api-reference/files/list)
+
+`GET /platform/v1/files`
+
+---
+
+- get `credit grants` (only support `sessionkey`)
+
+`GET /platform/dashboard/billing/credit_grants`
+
+---
+
+- get `subscription` (only support `sessionkey`)
+
+`GET /platform/dashboard/billing/subscription`
+
+---
+
+- get `api keys` (only support `sessionkey`)
+
+`GET /platform/dashboard/user/api_keys`
 
 ---
 

@@ -23,9 +23,30 @@
 
 ---
 
+### ChatGPT APIs
+
+---
+
+- `ChatGPT` 登录（返回 `accessToken`）（目前仅支持 `ChatGPT` 账号，谷歌或微软账号没有测试）
+
+`POST /chatgpt/login`
+
+<details>
+
+```json
+{
+  "username": "email",
+  "password": "password"
+}
+```
+
+</details>
+
+---
+
 - 获取对话列表（历史记录）
 
-`GET /conversations?offset=0&limit=20`
+`GET /chatgpt/conversations?offset=0&limit=20`
 
 `offset` 不传默认为 0, `limit` 不传默认为 20 (最大为 100)
 
@@ -33,13 +54,13 @@
 
 - 获取对话内容
 
-`GET /conversation/{conversationID}`
+`GET /chatgpt/conversation/{conversationID}`
 
 ---
 
 - 新建对话
 
-`POST /conversation`
+`POST /chatgpt/conversation`
 
 <details>
 
@@ -74,7 +95,7 @@
 
 - 生成对话标题
 
-`POST /conversation/gen_title/{conversationID}`
+`POST /chatgpt/conversation/gen_title/{conversationID}`
 
 <details>
 
@@ -90,7 +111,7 @@
 
 - 重命名对话标题
 
-`PATCH /conversation/{conversationID}`
+`PATCH /chatgpt/conversation/{conversationID}`
 
 <details>
 
@@ -106,7 +127,7 @@
 
 - 删除单个对话
 
-`PATCH /conversation/{conversationID}`
+`PATCH /chatgpt/conversation/{conversationID}`
 
 <details>
 
@@ -122,7 +143,7 @@
 
 - 删除所有对话
 
-`PATCH /conversations`
+`PATCH /chatgpt/conversations`
 
 <details>
 
@@ -138,7 +159,7 @@
 
 - 消息反馈
 
-`POST /conversation/message_feedback`
+`POST /chatgpt/conversation/message_feedback`
 
 <details>
 
@@ -154,9 +175,13 @@
 
 ---
 
-- 登录（目前仅支持 `ChatGPT` 账号，谷歌或微软账号没有测试）
+### Platform APIs
 
-`POST /auth/login`
+---
+
+- `platform` 登录（返回 `sessionKey`）
+
+`POST /platform/login`
 
 <details>
 
@@ -171,9 +196,41 @@
 
 ---
 
-- [Chat](https://platform.openai.com/docs/api-reference/chat)（基于 `apiKey` 而不是 `accessToken` 的方式）
+- [List models](https://platform.openai.com/docs/api-reference/models/list)
 
-`POST /v1/chat/completions`
+`GET /platform/v1/models`
+
+---
+
+- [Retrieve model](https://platform.openai.com/docs/api-reference/models/retrieve)
+
+`GET /platform/v1/models/{model}`
+
+---
+
+- [Create completion](https://platform.openai.com/docs/api-reference/completions/create)
+
+`POST /platform/v1/completions`
+
+<details>
+
+```json
+{
+  "model": "text-davinci-003",
+  "prompt": "Say this is a test",
+  "max_tokens": 7,
+  "temperature": 0,
+  "stream": true
+}
+```
+
+</details>
+
+---
+
+- [Create chat completion](https://platform.openai.com/docs/api-reference/chat/create)
+
+`POST /platform/v1/chat/completions`
 
 <details>
 
@@ -191,6 +248,83 @@
 ```
 
 </details>
+
+---
+
+- [Create edit](https://platform.openai.com/docs/api-reference/edits/create)
+
+`POST /platform/v1/edits`
+
+<details>
+
+```json
+{
+  "model": "text-davinci-edit-001",
+  "input": "What day of the wek is it?",
+  "instruction": "Fix the spelling mistakes"
+}
+```
+
+</details>
+
+---
+
+- [Create image](https://platform.openai.com/docs/api-reference/images/create)
+
+`POST /platform/v1/images/generations`
+
+<details>
+
+```json
+{
+  "prompt": "A cute dog",
+  "n": 2,
+  "size": "1024x1024"
+}
+```
+
+</details>
+
+---
+
+- [Create embeddings](https://platform.openai.com/docs/api-reference/embeddings/create)
+
+`POST /platform/v1/embeddings`
+
+<details>
+
+```json
+{
+  "model": "text-embedding-ada-002",
+  "input": "The food was delicious and the waiter..."
+}
+```
+
+</details>
+
+---
+ 
+- [List files](https://platform.openai.com/docs/api-reference/files/list)
+
+`GET /platform/v1/files`
+
+---
+
+- 获取 `credit grants` （只能传 `sessionKey`）
+
+`GET /platform/dashboard/billing/credit_grants`
+
+---
+
+- 获取 `subscription` （只能传 `sessionKey`）
+
+`GET /platform/dashboard/billing/subscription`
+
+---
+
+- 获取 `api keys` （只能传 `sessionKey`）
+
+`GET /platform/dashboard/user/api_keys`
 
 ---
 
