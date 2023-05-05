@@ -1,6 +1,14 @@
 name: "build for docker"
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+      - linweiyuan/go-chatgpt-api
+  pull_request:
+    branches:
+      - main
+      - linweiyuan/go-chatgpt-api
 
 jobs:
   build:
