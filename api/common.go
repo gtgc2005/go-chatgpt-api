@@ -4,7 +4,6 @@ package api
 import (
 	"bufio"
 	"encoding/json"
-	"io"
 	"os"
 	"strings"
 	"time"
@@ -30,17 +29,19 @@ const (
 	GetStateErrorMessage               = "Failed to get state."
 	EmailInvalidErrorMessage           = "Email is not valid."
 	EmailOrPasswordInvalidErrorMessage = "Email or password is not correct."
-	GetAccessTokenErrorMessage         = "Failed to get access token, please try again later."
+	GetAccessTokenErrorMessage         = "Failed to get access token."
 
-	AuthSessionUrl   = "https://chat.openai.com/api/auth/session"
-	accessDeniedText = "Access denied, please set environment variable GO_CHATGPT_API_PROXY=socks5://chatgpt-proxy-server-warp:65535 or something like this."
-	welcomeText      = "Welcome to ChatGPT"
+	healthCheckUrl       = "https://chat.openai.com/backend-api/accounts/check"
+	welcomeHint          = "Welcome to ChatGPT"
+	defaultCookiesApiUrl = "https://api.linweiyuan.com/chatgpt/cookies"
+	errorHint403         = "If you still hit 403, do not raise new issue (will be closed directly without comment), change to a new clean IP or use legacy version first."
+	errorHintBlock       = "You have been blocked to use cookies api because your IP is detected by Cloudflare WAF."
 )
 
 var Client tls_client.HttpClient
 
 //goland:noinspection GoSnakeCaseUsage
-var __cf_bm = "" // https://developers.cloudflare.com/fundamentals/get-started/reference/cloudflare-cookies/#__cf_bm-cookie-for-cloudflare-bot-products
+var __cf_bm = ""
 var firstTime = true
 
 type LoginInfo struct {
@@ -71,7 +72,7 @@ func init() {
 			logger.Error("Failed to config proxy: " + err.Error())
 			return
 		}
-		logger.Info("GO_CHATGPT_API_PROXY:" + proxyUrl)
+		logger.Info("GO_CHATGPT_API_PROXY: " + proxyUrl)
 
 		for {
 			resp, err := healthCheck()
@@ -88,11 +89,6 @@ func init() {
 		resp, err := healthCheck()
 		if err == nil {
 			defer resp.Body.Close()
-			data, _ := io.ReadAll(resp.Body)
-			if string(data) == "error code: 1020" {
-				logger.Error(accessDeniedText)
-				return
-			}
 
 			checkHealthCheckStatus(resp)
 		}
@@ -139,25 +135,27 @@ func HandleConversationResponse(c *gin.Context, resp *http.Response) {
 
 //goland:noinspection GoUnhandledErrorResult
 func checkHealthCheckStatus(resp *http.Response) {
+	cookiesApiUrl := os.Getenv("GO_CHATGPT_API_COOKIES_API_URL")
+
 	defer resp.Body.Close()
-	if resp != nil && resp.StatusCode == http.StatusOK {
-		logger.Info(welcomeText)
+	if resp != nil && resp.StatusCode == http.StatusUnauthorized && cookiesApiUrl == "" {
+		logger.Info(welcomeHint)
 		firstTime = false
 	} else {
-		cookiesApiUrl := os.Getenv("GO_CHATGPT_API_COOKIES_API_URL")
-		if cookiesApiUrl != "" {
-			go getCookiesSSE(cookiesApiUrl)
+		if cookiesApiUrl == "" {
+			logger.Info("GO_CHATGPT_API_COOKIES_API_URL defaults to: " + defaultCookiesApiUrl)
+			cookiesApiUrl = defaultCookiesApiUrl
 		} else {
-			logger.Info(welcomeText)
-			firstTime = false
+			logger.Info("GO_CHATGPT_API_COOKIES_API_URL: " + cookiesApiUrl)
 		}
+
+		go getCookiesSSE(cookiesApiUrl)
 	}
 }
 
 func healthCheck() (resp *http.Response, err error) {
-	req, _ := http.NewRequest(http.MethodGet, AuthSessionUrl, nil)
+	req, _ := http.NewRequest(http.MethodGet, healthCheckUrl, nil)
 	req.Header.Set("User-Agent", UserAgent)
-	InjectCookies(req)
 	resp, err = Client.Do(req)
 	return
 }
@@ -167,7 +165,13 @@ func getCookiesSSE(cookiesApiUrl string) {
 	req, _ := http.NewRequest(http.MethodGet, cookiesApiUrl, nil)
 	resp, err := Client.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
-		time.Sleep(time.Second)
+		if resp != nil && resp.StatusCode == http.StatusForbidden {
+			logger.Error(errorHintBlock)
+			time.Sleep(time.Hour)
+			os.Exit(1)
+		}
+
+		time.Sleep(time.Minute)
 		getCookiesSSE(cookiesApiUrl)
 		return
 	}
@@ -181,17 +185,24 @@ func getCookiesSSE(cookiesApiUrl string) {
 		}
 
 		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "event") || line == "" {
+		if strings.HasPrefix(line, "event") ||
+			strings.HasPrefix(line, "data: 20") ||
+			line == "" {
 			continue
 		}
 
-		responseMap := make(map[string]string)
-		json.Unmarshal([]byte(line[6:]), &responseMap)
-		__cf_bm = responseMap["__cf_bm"]
+		if len(line) > 6 {
+			responseMap := make(map[string]string)
+			err = json.Unmarshal([]byte(line[6:]), &responseMap)
+			if err == nil {
+				__cf_bm = responseMap["__cf_bm"]
 
-		if firstTime {
-			logger.Info(welcomeText)
-			firstTime = false
+				if firstTime && __cf_bm != "" {
+					logger.Info(welcomeHint)
+					logger.Error(errorHint403)
+					firstTime = false
+				}
+			}
 		}
 	}
 

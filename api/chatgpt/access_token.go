@@ -100,6 +100,12 @@ func (userLogin *UserLogin) CheckPassword(state string, username string, passwor
 
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusBadRequest {
+		doc, _ := goquery.NewDocumentFromReader(resp.Body)
+		alert := doc.Find("#prompt-alert").Text()
+		if alert != "" {
+			return "", resp.StatusCode, errors.New(strings.TrimSpace(alert))
+		}
+
 		return "", resp.StatusCode, errors.New(api.EmailOrPasswordInvalidErrorMessage)
 	}
 
@@ -122,6 +128,10 @@ func (userLogin *UserLogin) CheckPassword(state string, username string, passwor
 			}
 
 			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusFound {
+				return "", resp.StatusCode, errors.New(api.GetAccessTokenErrorMessage)
+			}
+
 			return "", http.StatusOK, nil
 		}
 
@@ -133,7 +143,7 @@ func (userLogin *UserLogin) CheckPassword(state string, username string, passwor
 
 //goland:noinspection GoUnhandledErrorResult,GoErrorStringFormat,GoUnusedParameter
 func (userLogin *UserLogin) GetAccessToken(code string) (string, int, error) {
-	req, err := http.NewRequest(http.MethodGet, api.AuthSessionUrl, nil)
+	req, err := http.NewRequest(http.MethodGet, authSessionUrl, nil)
 	req.Header.Set("User-Agent", api.UserAgent)
 	api.InjectCookies(req)
 	resp, err := userLogin.client.Do(req)
@@ -143,6 +153,12 @@ func (userLogin *UserLogin) GetAccessToken(code string) (string, int, error) {
 
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusTooManyRequests {
+			responseMap := make(map[string]string)
+			json.NewDecoder(resp.Body).Decode(&responseMap)
+			return "", resp.StatusCode, errors.New(responseMap["detail"])
+		}
+
 		return "", resp.StatusCode, errors.New(api.GetAccessTokenErrorMessage)
 	}
 
