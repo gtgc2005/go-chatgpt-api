@@ -17,7 +17,7 @@ const (
 	defaultErrorMessageKey             = "errorMessage"
 	AuthorizationHeader                = "Authorization"
 	ContentType                        = "application/x-www-form-urlencoded"
-	UserAgent                          = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36"
+	UserAgent                          = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 	Auth0Url                           = "https://auth0.openai.com"
 	LoginUsernameUrl                   = Auth0Url + "/u/login/identifier?state="
 	LoginPasswordUrl                   = Auth0Url + "/u/login/password?state="
@@ -69,6 +69,8 @@ func GetAccessToken(accessToken string) string {
 
 //goland:noinspection GoUnhandledErrorResult
 func HandleConversationResponse(c *gin.Context, resp *http.Response) {
+	c.Writer.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
+
 	reader := bufio.NewReader(resp.Body)
 	for {
 		if c.Request.Context().Err() != nil {
