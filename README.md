@@ -54,22 +54,32 @@ https://github.com/linweiyuan/go-chatgpt-api/tree/main/example （需安装 `HTT
 家庭网络无需跑 `warp` 服务，跑了也没用，会报错，仅在服务器需要
 
 `GPT-4` 相关模型目前需要验证 `arkose_token`，如果配置 `GO_CHATGPT_API_ARKOSE_TOKEN_URL` 则使用在线服务获取 `arkose_token`
-，不设置或者留空则由程序内部自己生成
+，不设置或者留空则由程序内部自己生成（推荐优先使用这种）
+
+`GO_CHATGPT_API_ARKOSE_TOKEN_URL` 可选值：
+
+- https://arkose-token.linweiyuan.com
+- http://to.ken.xiu.ee
+- https://arkose-token.tms.im
+- http://arkosetoken.52swap.cn
+
+如果用以上方法还是 `403`
+，则有一种可能就是你的账号被风控了，可以尝试用这个账号打开官网，看下会不会弹验证码，然后手动处理下，接着再回来看 `go-chatgpt-api`
+还会不会 `403`
 
 ---
 
-根据你的网络环境不同，可以展开查看对应配置（全部 `docker` 服务都跑起来的情况下，内存占用不到 100
-兆，`Vultr` 纽约区最低配
-`$3.5` 一个月即可胜任，熟悉 `IPv6` 操作的还可以尝试 `$2.5` 的配置）
+根据你的网络环境不同，可以展开查看对应配置
 
 <details>
 
 <summary>直接利用现成的服务</summary>
 
-服务器不定时维护，不保证高可用，利用这些服务导致的账号安全问题，与我无关
+服务器不定时维护，不保证高可用，利用这些服务导致的账号安全问题，与本项目无关
 
-- [go-chatgpt-api](https://github.com/linweiyuan/go-chatgpt-api) -> https://go-chatgpt-api.linweiyuan.com
-- arkose-token -> https://arkose-token.linweiyuan.com
+- https://go-chatgpt-api.linweiyuan.com
+- https://api.tms.im
+- https://go-api.youhuigo.click
 
 </details>
 
@@ -83,13 +93,12 @@ https://github.com/linweiyuan/go-chatgpt-api/tree/main/example （需安装 `HTT
     image: linweiyuan/go-chatgpt-api
     ports:
       - 8080:8080
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       - TZ=Asia/Shanghai
       - GO_CHATGPT_API_PROXY=
       - GO_CHATGPT_API_PANDORA=
       - GO_CHATGPT_API_ARKOSE_TOKEN_URL=
+      - GO_CHATGPT_API_ARKOSE_PUID=
     restart: unless-stopped
 ```
 
@@ -105,13 +114,12 @@ https://github.com/linweiyuan/go-chatgpt-api/tree/main/example （需安装 `HTT
     image: linweiyuan/go-chatgpt-api
     ports:
       - 8080:8080
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       - TZ=Asia/Shanghai
       - GO_CHATGPT_API_PROXY=
       - GO_CHATGPT_API_PANDORA=
       - GO_CHATGPT_API_ARKOSE_TOKEN_URL=
+      - GO_CHATGPT_API_ARKOSE_PUID=
     restart: unless-stopped
 ```
 
@@ -129,13 +137,12 @@ https://github.com/linweiyuan/go-chatgpt-api/tree/main/example （需安装 `HTT
     image: linweiyuan/go-chatgpt-api
     ports:
       - 8080:8080
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       - TZ=Asia/Shanghai
       - GO_CHATGPT_API_PROXY=socks5://chatgpt-proxy-server-warp:65535
       - GO_CHATGPT_API_PANDORA=
       - GO_CHATGPT_API_ARKOSE_TOKEN_URL=
+      - GO_CHATGPT_API_ARKOSE_PUID=
     depends_on:
       - chatgpt-proxy-server-warp
     restart: unless-stopped
