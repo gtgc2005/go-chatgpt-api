@@ -2,27 +2,22 @@
 
 ## 一个尝试绕过 `Cloudflare` 来使用 `ChatGPT` 接口的程序
 
-### 实验性质练手项目，不保证稳定性和向后兼容，使用风险自负
-
 ---
 
-### 群聊
+### 支持接口
 
-https://github.com/linweiyuan/go-chatgpt-api/discussions/197
+- https://chat.openai.com/auth/login 登录返回 `accessToken`（谷歌和微软账号暂不支持登录，但可正常使用其他接口）
+- 模型和插件查询
+- `GPT-3.5` 和 `GPT-4` 对话增删改查及分享
+- https://platform.openai.com/playground 登录返回 `apiKey`
+- `apiKey` 余额查询
+- 等等 ...
+- 支持 `ChatGPT` 转 `API`，接口 `/imitate/v1/chat/completions`，利用 `accessToken` 模拟 `apiKey`，实现伪免费使用 `API`
+  ，从而支持集成仅支持 `apiKey` 调用的第三方客户端项目
 
----
+范例（URL 和参数基本保持着和官网一致，部分接口有些许改动），部分例子，不是全部，**理论上**全部基于文本传输的接口都支持
 
-### 相关博客（程序更新很多次，文章的内容可能和现在的不一样，供参考）：[ChatGPT](https://linweiyuan.github.io/categories/ChatGPT/)
-
-- [如何生成 GPT-4 arkose_token](https://linweiyuan.github.io/2023/06/24/%E5%A6%82%E4%BD%95%E7%94%9F%E6%88%90-GPT-4-arkose-token.html)
-- [利用 HTTP Client 来调试 go-chatgpt-api](https://linweiyuan.github.io/2023/06/18/%E5%88%A9%E7%94%A8-HTTP-Client-%E6%9D%A5%E8%B0%83%E8%AF%95-go-chatgpt-api.html)
-- [一种解决 ChatGPT Access denied 的方法](https://linweiyuan.github.io/2023/04/15/%E4%B8%80%E7%A7%8D%E8%A7%A3%E5%86%B3-ChatGPT-Access-denied-%E7%9A%84%E6%96%B9%E6%B3%95.html)
-- [ChatGPT 如何自建代理](https://linweiyuan.github.io/2023/04/08/ChatGPT-%E5%A6%82%E4%BD%95%E8%87%AA%E5%BB%BA%E4%BB%A3%E7%90%86.html)
-- [一种取巧的方式绕过 Cloudflare v2 验证](https://linweiyuan.github.io/2023/03/14/%E4%B8%80%E7%A7%8D%E5%8F%96%E5%B7%A7%E7%9A%84%E6%96%B9%E5%BC%8F%E7%BB%95%E8%BF%87-Cloudflare-v2-%E9%AA%8C%E8%AF%81.html)
-
----
-
-### 如果有疑问而不是什么程序出错其实可以在 [Discussions](https://github.com/linweiyuan/go-chatgpt-api/discussions) 里发而不是新增 Issue
+https://github.com/linweiyuan/go-chatgpt-api/tree/main/example （需安装 `HTTP Client` 插件）
 
 ---
 
@@ -30,13 +25,10 @@ https://github.com/linweiyuan/go-chatgpt-api/discussions/197
 
 汇总贴：https://github.com/linweiyuan/go-chatgpt-api/issues/74
 
----
+如果有疑问而不是什么程序出错其实可以在 [Discussions](https://github.com/linweiyuan/go-chatgpt-api/discussions) 里发而不是新增
+Issue
 
-### 范例（URL 和参数基本保持着和官网一致，部分接口有些许改动）
-
-部分例子，不是全部，**理论上**全部基于文本传输的接口都支持
-
-https://github.com/linweiyuan/go-chatgpt-api/tree/main/example （需安装 `HTTP Client` 插件）
+群聊：https://github.com/linweiyuan/go-chatgpt-api/discussions/197
 
 ---
 
@@ -56,15 +48,18 @@ https://github.com/linweiyuan/go-chatgpt-api/tree/main/example （需安装 `HTT
 `GPT-4` 相关模型目前需要验证 `arkose_token`，如果配置 `GO_CHATGPT_API_ARKOSE_TOKEN_URL` 则使用在线服务获取 `arkose_token`
 ，不设置或者留空则由程序内部自己生成（推荐优先使用这种）
 
-`GO_CHATGPT_API_ARKOSE_TOKEN_URL` 可选值：
+`GO_CHATGPT_API_ARKOSE_TOKEN_URL` 可选值：（目前全部已失效）
 
 - https://arkose-token.linweiyuan.com
-- http://to.ken.xiu.ee
 - https://arkose-token.tms.im
 - http://arkosetoken.52swap.cn
+- https://a-token.xiu.ee
+- https://tttoken.azurewebsites.net
+- https://arkosetoken.tsmai.top
+- https://api.tms.im/arkose-token-ap
 
-如果用以上方法还是 `403`
-，则有一种可能就是你的账号被风控了，可以尝试用这个账号打开官网，看下会不会弹验证码，然后手动处理下，接着再回来看 `go-chatgpt-api`
+如果用以上方法还是 `403` 并且你的 `Plus`
+没有过期，则有一种可能就是你的账号被风控了，可以尝试用这个账号打开官网，看下会不会弹验证码，然后手动处理下，接着再回来看 `go-chatgpt-api`
 还会不会 `403`
 
 ---
@@ -79,7 +74,6 @@ https://github.com/linweiyuan/go-chatgpt-api/tree/main/example （需安装 `HTT
 
 - https://go-chatgpt-api.linweiyuan.com
 - https://api.tms.im
-- https://go-api.youhuigo.click
 
 </details>
 
@@ -98,7 +92,8 @@ https://github.com/linweiyuan/go-chatgpt-api/tree/main/example （需安装 `HTT
       - GO_CHATGPT_API_PROXY=
       - GO_CHATGPT_API_PANDORA=
       - GO_CHATGPT_API_ARKOSE_TOKEN_URL=
-      - GO_CHATGPT_API_ARKOSE_PUID=
+      - GO_CHATGPT_API_OPENAI_EMAIL=
+      - GO_CHATGPT_API_OPENAI_PASSWORD=
     restart: unless-stopped
 ```
 
@@ -119,7 +114,8 @@ https://github.com/linweiyuan/go-chatgpt-api/tree/main/example （需安装 `HTT
       - GO_CHATGPT_API_PROXY=
       - GO_CHATGPT_API_PANDORA=
       - GO_CHATGPT_API_ARKOSE_TOKEN_URL=
-      - GO_CHATGPT_API_ARKOSE_PUID=
+      - GO_CHATGPT_API_OPENAI_EMAIL=
+      - GO_CHATGPT_API_OPENAI_PASSWORD=
     restart: unless-stopped
 ```
 
@@ -142,7 +138,8 @@ https://github.com/linweiyuan/go-chatgpt-api/tree/main/example （需安装 `HTT
       - GO_CHATGPT_API_PROXY=socks5://chatgpt-proxy-server-warp:65535
       - GO_CHATGPT_API_PANDORA=
       - GO_CHATGPT_API_ARKOSE_TOKEN_URL=
-      - GO_CHATGPT_API_ARKOSE_PUID=
+      - GO_CHATGPT_API_OPENAI_EMAIL=
+      - GO_CHATGPT_API_OPENAI_PASSWORD=
     depends_on:
       - chatgpt-proxy-server-warp
     restart: unless-stopped
@@ -242,6 +239,16 @@ proxy:
   url: https://go-chatgpt-api.linweiyuan.com
 ```
 
+---
+
+- [Yidadaa/ChatGPT-Next-Web](https://github.com/Yidadaa/ChatGPT-Next-Web)
+
+环境变量
+
+```
+BASE_URL=https://go-chatgpt-api.linweiyuan.com/imitate
+```
+
 ### 如何控制打包行为
 
 Fork 此项目后，可以在 `Settings-Secrets and variables-Actions` 下控制如下行为：
@@ -255,11 +262,21 @@ amd64）
 
 ---
 
+### 相关博客（程序更新很多次，文章的内容可能和现在的不一样，仅供参考）：[ChatGPT](https://linweiyuan.github.io/categories/ChatGPT/)
+
+- [如何生成 GPT-4 arkose_token](https://linweiyuan.github.io/2023/06/24/%E5%A6%82%E4%BD%95%E7%94%9F%E6%88%90-GPT-4-arkose-token.html)
+- [利用 HTTP Client 来调试 go-chatgpt-api](https://linweiyuan.github.io/2023/06/18/%E5%88%A9%E7%94%A8-HTTP-Client-%E6%9D%A5%E8%B0%83%E8%AF%95-go-chatgpt-api.html)
+- [一种解决 ChatGPT Access denied 的方法](https://linweiyuan.github.io/2023/04/15/%E4%B8%80%E7%A7%8D%E8%A7%A3%E5%86%B3-ChatGPT-Access-denied-%E7%9A%84%E6%96%B9%E6%B3%95.html)
+- [ChatGPT 如何自建代理](https://linweiyuan.github.io/2023/04/08/ChatGPT-%E5%A6%82%E4%BD%95%E8%87%AA%E5%BB%BA%E4%BB%A3%E7%90%86.html)
+- [一种取巧的方式绕过 Cloudflare v2 验证](https://linweiyuan.github.io/2023/03/14/%E4%B8%80%E7%A7%8D%E5%8F%96%E5%B7%A7%E7%9A%84%E6%96%B9%E5%BC%8F%E7%BB%95%E8%BF%87-Cloudflare-v2-%E9%AA%8C%E8%AF%81.html)
+
+---
+
 ### 最后感谢各位同学
 
 <!--suppress HtmlRequiredAltAttribute -->
 <a href="https://github.com/linweiyuan/go-chatgpt-api/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=linweiyuan/go-chatgpt-api"  alt=""/>
+  <img src="https://contrib.rocks/image?repo=linweiyuan/go-chatgpt-api&max=-1"  alt=""/>
 </a>
 
 Made with [contrib.rocks](https://contrib.rocks).

@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/acheong08/OpenAIAuth/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/linweiyuan/funcaptcha"
 	"github.com/linweiyuan/go-chatgpt-api/api"
@@ -19,12 +21,15 @@ import (
 var (
 	arkoseTokenUrl string
 	puid           string
+	bx             string
 )
 
 //goland:noinspection SpellCheckingInspection
 func init() {
 	arkoseTokenUrl = os.Getenv("GO_CHATGPT_API_ARKOSE_TOKEN_URL")
-	puid = os.Getenv("GO_CHATGPT_API_PUID")
+	bx = os.Getenv("GO_CHATGPT_API_BX")
+
+	setupPUID()
 }
 
 //goland:noinspection GoUnhandledErrorResult
@@ -49,7 +54,13 @@ func CreateConversation(c *gin.Context) {
 
 	if strings.HasPrefix(request.Model, gpt4Model) {
 		if arkoseTokenUrl == "" {
-			arkoseToken, err := funcaptcha.GetOpenAIToken()
+			var arkoseToken string
+			var err error
+			if bx == "" {
+				arkoseToken, err = funcaptcha.GetOpenAIToken()
+			} else {
+				arkoseToken, err = funcaptcha.GetOpenAITokenWithBx(bx)
+			}
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusInternalServerError, api.ReturnMessage(getArkoseTokenErrorMessage))
 				return
@@ -59,14 +70,21 @@ func CreateConversation(c *gin.Context) {
 		} else {
 			req, _ := http.NewRequest(http.MethodGet, arkoseTokenUrl, nil)
 			resp, err := api.Client.Do(req)
-			if err != nil || resp.StatusCode != http.StatusOK {
+			if err != nil {
 				c.AbortWithStatusJSON(http.StatusInternalServerError, api.ReturnMessage(getArkoseTokenErrorMessage))
 				return
 			}
 
+			if resp.StatusCode != http.StatusOK {
+				c.AbortWithStatusJSON(resp.StatusCode, api.ReturnMessage(getArkoseTokenErrorMessage))
+				return
+			}
+
+			defer resp.Body.Close()
 			responseMap := make(map[string]interface{})
 			json.NewDecoder(resp.Body).Decode(&responseMap)
-			request.ArkoseToken = responseMap["token"].(string)
+			arkoseToken := responseMap["token"].(string)
+			request.ArkoseToken = arkoseToken
 		}
 	}
 
@@ -96,6 +114,34 @@ func sendConversationRequest(c *gin.Context, request CreateConversationRequest) 
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		defer resp.Body.Close()
+
+		req, _ := http.NewRequest(http.MethodGet, api.ChatGPTApiUrlPrefix+"/backend-api/models?history_and_training_disabled=false", nil)
+		req.Header.Set("User-Agent", api.UserAgent)
+		req.Header.Set("Authorization", api.GetAccessToken(c.GetHeader(api.AuthorizationHeader)))
+		response, err := api.Client.Do(req)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, api.ReturnMessage(err.Error()))
+			return nil, true
+		}
+
+		defer response.Body.Close()
+		modelAvailable := false
+		var getModelsResponse GetModelsResponse
+		json.NewDecoder(response.Body).Decode(&getModelsResponse)
+		for _, model := range getModelsResponse.Models {
+			if model.Slug == request.Model {
+				modelAvailable = true
+				break
+			}
+		}
+		if !modelAvailable {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"detail": noModelPermissionErrorMessage,
+			})
+			return nil, true
+		}
+
 		responseMap := make(map[string]interface{})
 		json.NewDecoder(resp.Body).Decode(&responseMap)
 		c.AbortWithStatusJSON(resp.StatusCode, responseMap)
@@ -170,5 +216,30 @@ func handleConversationResponse(c *gin.Context, resp *http.Response, request Cre
 		}
 
 		handleConversationResponse(c, resp, continueConversationRequest)
+	}
+}
+
+//goland:noinspection SpellCheckingInspection
+func setupPUID() {
+	username := os.Getenv("GO_CHATGPT_API_OPENAI_EMAIL")
+	password := os.Getenv("GO_CHATGPT_API_OPENAI_PASSWORD")
+	if username != "" && password != "" {
+		go func() {
+			for {
+				authenticator := auth.NewAuthenticator(username, password, os.Getenv("GO_CHATGPT_API_PROXY"))
+				err := authenticator.Begin()
+				if err != nil {
+					logger.Error("Failed to login to get PUID.")
+					break
+				}
+
+				puid, err = authenticator.GetPUID()
+				if err != nil {
+					logger.Error("Failed to get PUID.")
+					break
+				}
+				time.Sleep(24 * time.Hour * 7)
+			}
+		}()
 	}
 }

@@ -1,7 +1,11 @@
 package chatgpt
 
 //goland:noinspection GoSnakeCaseUsage
-import tls_client "github.com/bogdanfinn/tls-client"
+import (
+	"github.com/google/uuid"
+
+	tls_client "github.com/bogdanfinn/tls-client"
+)
 
 type UserLogin struct {
 	client tls_client.HttpClient
@@ -18,6 +22,14 @@ type CreateConversationRequest struct {
 	ArkoseToken                string    `json:"arkose_token"`
 	HistoryAndTrainingDisabled bool      `json:"history_and_training_disabled"`
 	AutoContinue               bool      `json:"auto_continue"`
+}
+
+func (c *CreateConversationRequest) AddMessage(role string, content string) {
+	c.Messages = append(c.Messages, Message{
+		ID:      uuid.New().String(),
+		Author:  Author{Role: role},
+		Content: Content{ContentType: "text", Parts: []string{content}},
+	})
 }
 
 type Message struct {
@@ -64,4 +76,25 @@ type CreateConversationResponse struct {
 	} `json:"message"`
 	ConversationID string      `json:"conversation_id"`
 	Error          interface{} `json:"error"`
+}
+
+type GetModelsResponse struct {
+	Models []struct {
+		Slug         string   `json:"slug"`
+		MaxTokens    int      `json:"max_tokens"`
+		Title        string   `json:"title"`
+		Description  string   `json:"description"`
+		Tags         []string `json:"tags"`
+		Capabilities struct {
+		} `json:"capabilities"`
+		EnabledTools []string `json:"enabled_tools,omitempty"`
+	} `json:"models"`
+	Categories []struct {
+		Category             string `json:"category"`
+		HumanCategoryName    string `json:"human_category_name"`
+		SubscriptionLevel    string `json:"subscription_level"`
+		DefaultModel         string `json:"default_model"`
+		CodeInterpreterModel string `json:"code_interpreter_model"`
+		PluginsModel         string `json:"plugins_model"`
+	} `json:"categories"`
 }
