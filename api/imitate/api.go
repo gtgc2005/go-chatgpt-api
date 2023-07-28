@@ -3,10 +3,12 @@ package imitate
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -14,6 +16,7 @@ import (
 	"github.com/linweiyuan/funcaptcha"
 	"github.com/linweiyuan/go-chatgpt-api/api"
 	"github.com/linweiyuan/go-chatgpt-api/api/chatgpt"
+	"github.com/linweiyuan/go-logger/logger"
 
 	http "github.com/bogdanfinn/fhttp"
 )
@@ -22,12 +25,18 @@ import (
 var (
 	arkoseTokenUrl string
 	bx             string
+	reg            *regexp.Regexp
 )
 
 //goland:noinspection SpellCheckingInspection
 func init() {
-	arkoseTokenUrl = os.Getenv("GO_CHATGPT_API_ARKOSE_TOKEN_URL")
-	bx = os.Getenv("GO_CHATGPT_API_BX")
+	arkoseTokenUrl = os.Getenv("ARKOSE_TOKEN_URL")
+	bx = os.Getenv("BX")
+	var err error
+	reg, err = regexp.Compile("[^a-zA-Z0-9]+")
+	if err != nil {
+		panic(fmt.Sprintf("Error compiling regex: %v", err))
+	}
 }
 
 func CreateChatCompletions(c *gin.Context) {
@@ -43,7 +52,7 @@ func CreateChatCompletions(c *gin.Context) {
 		return
 	}
 
-	authHeader := c.GetHeader("Authorization")
+	authHeader := c.GetHeader(api.AuthorizationHeader)
 	token := os.Getenv("IMITATE_ACCESS_TOKEN")
 	if authHeader != "" {
 		customAccessToken := strings.Replace(authHeader, "Bearer ", "", 1)
@@ -54,7 +63,7 @@ func CreateChatCompletions(c *gin.Context) {
 	}
 
 	// 将聊天请求转换为ChatGPT请求。
-	translatedRequest := convertAPIRequest(originalRequest)
+	translatedRequest, model := convertAPIRequest(originalRequest)
 
 	response, done := sendConversationRequest(c, translatedRequest, token)
 	if done {
@@ -77,12 +86,16 @@ func CreateChatCompletions(c *gin.Context) {
 
 	var fullResponse string
 
+	id := generateId()
+
 	for i := 3; i > 0; i-- {
 		var continueInfo *ContinueInfo
 		var responsePart string
-		responsePart, continueInfo = Handler(c, response, originalRequest.Stream)
+		var continueSignal string
+		responsePart, continueInfo = Handler(c, response, originalRequest.Stream, id, model)
 		fullResponse += responsePart
-		if continueInfo == nil {
+		continueSignal = os.Getenv("CONTINUE_SIGNAL")
+		if continueInfo == nil || continueSignal == "" {
 			break
 		}
 		println("Continuing conversation")
@@ -116,15 +129,25 @@ func CreateChatCompletions(c *gin.Context) {
 	}
 
 	if !originalRequest.Stream {
-		c.JSON(200, newChatCompletion(fullResponse))
+		c.JSON(200, newChatCompletion(fullResponse, model, id))
 	} else {
 		c.String(200, "data: [DONE]\n\n")
 	}
 }
 
+func generateId() string {
+	id := uuid.NewString()
+	id = strings.ReplaceAll(id, "-", "")
+	id = base64.StdEncoding.EncodeToString([]byte(id))
+	id = reg.ReplaceAllString(id, "")
+	return "chatcmpl-" + id
+}
+
 //goland:noinspection SpellCheckingInspection
-func convertAPIRequest(apiRequest APIRequest) chatgpt.CreateConversationRequest {
+func convertAPIRequest(apiRequest APIRequest) (chatgpt.CreateConversationRequest, string) {
 	chatgptRequest := NewChatGPTRequest()
+
+	var model = "gpt-3.5-turbo-0613"
 
 	if strings.HasPrefix(apiRequest.Model, "gpt-3.5") {
 		chatgptRequest.Model = "text-davinci-002-render-sha"
@@ -138,6 +161,7 @@ func convertAPIRequest(apiRequest APIRequest) chatgpt.CreateConversationRequest 
 			fmt.Println("Error getting Arkose token: ", err)
 		}
 		chatgptRequest.Model = apiRequest.Model
+		model = "gpt-4-0613"
 	}
 
 	if apiRequest.PluginIDs != nil {
@@ -152,7 +176,7 @@ func convertAPIRequest(apiRequest APIRequest) chatgpt.CreateConversationRequest 
 		chatgptRequest.AddMessage(apiMessage.Role, apiMessage.Content)
 	}
 
-	return chatgptRequest
+	return chatgptRequest, model
 }
 
 func GetOpenAIToken() (string, error) {
@@ -199,12 +223,11 @@ func sendConversationRequest(c *gin.Context, request chatgpt.CreateConversationR
 	jsonBytes, _ := json.Marshal(request)
 	req, _ := http.NewRequest(http.MethodPost, api.ChatGPTApiUrlPrefix+"/backend-api/conversation", bytes.NewBuffer(jsonBytes))
 	req.Header.Set("User-Agent", api.UserAgent)
-	req.Header.Set("Authorization", accessToken)
-	req.Header.Set("Accept", "text/event-stream")	
-	puid := os.Getenv("GO_CHATGPT_API_PUID")
-	if puid != "" {
+	req.Header.Set(api.AuthorizationHeader, accessToken)
+	req.Header.Set("Accept", "text/event-stream")
+	if chatgpt.PUID != "" {
 		//goland:noinspection SpellCheckingInspection
-		req.Header.Set("Cookie", "_puid="+puid)
+		req.Header.Set("Cookie", "_puid="+chatgpt.PUID)
 	}
 	resp, err := api.Client.Do(req)
 	if err != nil {
@@ -213,6 +236,10 @@ func sendConversationRequest(c *gin.Context, request chatgpt.CreateConversationR
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusUnauthorized {
+			logger.Error(fmt.Sprintf(api.AccountDeactivatedErrorMessage, c.GetString(api.EmailKey)))
+		}
+
 		responseMap := make(map[string]interface{})
 		json.NewDecoder(resp.Body).Decode(&responseMap)
 		c.AbortWithStatusJSON(resp.StatusCode, responseMap)
@@ -223,7 +250,7 @@ func sendConversationRequest(c *gin.Context, request chatgpt.CreateConversationR
 }
 
 //goland:noinspection SpellCheckingInspection
-func Handler(c *gin.Context, response *http.Response, stream bool) (string, *ContinueInfo) {
+func Handler(c *gin.Context, response *http.Response, stream bool, id string, model string) (string, *ContinueInfo) {
 	maxTokens := false
 
 	// Create a bufio.Reader from the response body
@@ -272,7 +299,7 @@ func Handler(c *gin.Context, response *http.Response, stream bool) (string, *Con
 			if originalResponse.Message.Metadata.MessageType != "next" && originalResponse.Message.Metadata.MessageType != "continue" || originalResponse.Message.EndTurn != nil {
 				continue
 			}
-			responseString := ConvertToString(&originalResponse, &previousText, isRole)
+			responseString := ConvertToString(&originalResponse, &previousText, isRole, id, model)
 			isRole = false
 			if stream {
 				_, err = c.Writer.WriteString(responseString)
@@ -292,7 +319,7 @@ func Handler(c *gin.Context, response *http.Response, stream bool) (string, *Con
 
 		} else {
 			if stream {
-				finalLine := StopChunk(finishReason)
+				finalLine := StopChunk(finishReason, id, model)
 				_, err := c.Writer.WriteString("data: " + finalLine.String() + "\n\n")
 				if err != nil {
 					return "", nil

@@ -2,6 +2,7 @@ package imitate
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/linweiyuan/go-chatgpt-api/api/chatgpt"
 )
@@ -31,12 +32,12 @@ type Delta struct {
 }
 
 //goland:noinspection SpellCheckingInspection
-func NewChatCompletionChunk(text string) ChatCompletionChunk {
+func NewChatCompletionChunk(text string, id string, model string) ChatCompletionChunk {
 	return ChatCompletionChunk{
-		ID:      "chatcmpl-QXlha2FBbmROaXhpZUFyZUF3ZXNvbWUK",
+		ID:      id,
 		Object:  "chat.completion.chunk",
-		Created: 0,
-		Model:   "gpt-3.5-turbo-0301",
+		Created: time.Now().Unix(),
+		Model:   model,
 		Choices: []Choices{
 			{
 				Index: 0,
@@ -49,12 +50,13 @@ func NewChatCompletionChunk(text string) ChatCompletionChunk {
 	}
 }
 
-func StopChunk(reason string) ChatCompletionChunk {
+//goland:noinspection SpellCheckingInspection
+func StopChunk(reason string, id string, model string) ChatCompletionChunk {
 	return ChatCompletionChunk{
-		ID:      "chatcmpl-QXlha2FBbmROaXhpZUFyZUF3ZXNvbWUK",
+		ID:      id,
 		Object:  "chat.completion.chunk",
-		Created: 0,
-		Model:   "gpt-3.5-turbo-0301",
+		Created: time.Now().Unix(),
+		Model:   model,
 		Choices: []Choices{
 			{
 				Index:        0,
@@ -122,12 +124,13 @@ type StringStruct struct {
 	Text string `json:"text"`
 }
 
-func newChatCompletion(fullTest string) ChatCompletion {
+//goland:noinspection SpellCheckingInspection
+func newChatCompletion(fullTest, model string, id string) ChatCompletion {
 	return ChatCompletion{
-		ID:      "chatcmpl-QXlha2FBbmROaXhpZUFyZUF3ZXNvbWUK",
+		ID:      id,
 		Object:  "chat.completion",
-		Created: int64(0),
-		Model:   "gpt-3.5-turbo-0301",
+		Created: time.Now().Unix(),
+		Model:   model,
 		Usage: usage{
 			PromptTokens:     0,
 			CompletionTokens: 0,
